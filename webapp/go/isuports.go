@@ -327,6 +327,10 @@ func retrieveTenantRowFromHeader(c echo.Context) (*TenantRow, error) {
 	baseHost := getEnv("ISUCON_BASE_HOSTNAME", ".t.isucon.dev")
 	tenantName := strings.TrimSuffix(c.Request().Host, baseHost)
 
+	fmt.Println("baseHost", baseHost)
+	fmt.Println("c.Request().Host", c.Request().Host)
+	fmt.Println("tenantName", tenantName)
+
 	// SaaS管理者用ドメイン
 	if tenantName == "admin" {
 		return &TenantRow{
