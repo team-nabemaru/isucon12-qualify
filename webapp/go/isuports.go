@@ -301,6 +301,8 @@ func parseViewer(c echo.Context) (*Viewer, error) {
 		return nil, fmt.Errorf("error retrieveTenantRowFromHeader at parseViewer: %w", err)
 	}
 	if tenant.Name == "admin" && role != RoleAdmin {
+		fmt.Println("tenant.Name", tenant.Name)
+		fmt.Println("role", role)
 		return nil, echo.NewHTTPError(http.StatusUnauthorized, "tenant not found")
 	}
 
