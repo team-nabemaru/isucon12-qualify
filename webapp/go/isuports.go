@@ -429,12 +429,12 @@ func lockFilePath(id int64) string {
 	return filepath.Join(tenantDBDir, fmt.Sprintf("%d.lock", id))
 }
 
-// 共有ロックする
+// 排他ロックする
 func flockByTenantID(tenantID int64) (io.Closer, error) {
 	p := lockFilePath(tenantID)
 
 	fl := flock.New(p)
-	if err := fl.TryRLock(); err != nil {
+	if err := fl.Lock(); err != nil {
 		return nil, fmt.Errorf("error flock.Lock: path=%s, %w", p, err)
 	}
 	return fl, nil
