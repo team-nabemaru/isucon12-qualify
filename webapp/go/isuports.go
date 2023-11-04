@@ -413,9 +413,14 @@ type CompetitionRow struct {
 }
 
 // 大会を取得する
-func retrieveCompetition(ctx context.Context, tenantDB dbOrTx, id string) (*CompetitionRow, error) {
+func retrieveCompetition(ctx context.Context, tenantDB dbOrTx, id string, _columns ...string) (*CompetitionRow, error) {
+	columns := "*"
+	if len(_columns) > 0 && _columns[0] != "" {
+		columns = _columns[0]
+	}
+
 	var c CompetitionRow
-	if err := tenantDB.GetContext(ctx, &c, "SELECT * FROM competition WHERE id = ?", id); err != nil {
+	if err := tenantDB.GetContext(ctx, &c, fmt.Sprintf("SELECT %s FROM competition WHERE id = ?", columns), id); err != nil {
 		return nil, fmt.Errorf("error Select competition: id=%s, %w", id, err)
 	}
 	return &c, nil
@@ -1203,7 +1208,7 @@ func playerHandler(c echo.Context) error {
 			ctx,
 			&ps,
 			// 最後にCSVに登場したスコアを採用する = row_numが一番大きいもの
-			"SELECT `competition_id` FROM player_score WHERE tenant_id = ? AND competition_id = ? AND player_id = ? ORDER BY row_num DESC LIMIT 1",
+			"SELECT `competition_id`, `score` FROM player_score WHERE tenant_id = ? AND competition_id = ? AND player_id = ? ORDER BY row_num DESC LIMIT 1",
 			v.tenantID,
 			c.ID,
 			p.ID,
@@ -1219,7 +1224,7 @@ func playerHandler(c echo.Context) error {
 
 	psds := make([]PlayerScoreDetail, 0, len(pss))
 	for _, ps := range pss {
-		comp, err := retrieveCompetition(ctx, tenantDB, ps.CompetitionID)
+		comp, err := retrieveCompetition(ctx, tenantDB, ps.CompetitionID, "title")
 		if err != nil {
 			return fmt.Errorf("error retrieveCompetition: %w", err)
 		}
