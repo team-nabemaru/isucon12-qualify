@@ -415,7 +415,7 @@ type CompetitionRow struct {
 // 大会を取得する
 func retrieveCompetition(ctx context.Context, tenantDB dbOrTx, id string) (*CompetitionRow, error) {
 	var c CompetitionRow
-	if err := tenantDB.GetContext(ctx, &c, fmt.Sprintf("SELECT %s FROM competition WHERE id = ?"), id); err != nil {
+	if err := tenantDB.GetContext(ctx, "SELECT * FROM competition WHERE id = ?", id); err != nil {
 		return nil, fmt.Errorf("error Select competition: id=%s, %w", id, err)
 	}
 	return &c, nil
