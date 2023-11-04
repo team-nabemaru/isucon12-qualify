@@ -193,9 +193,10 @@ func Run() {
 		return
 	}
 	adminDB.SetMaxOpenConns(10)
-	defer adminDB.Close()
 
 	tenantDB = adminDB
+
+	defer adminDB.Close()
 
 	port := getEnv("SERVER_APP_PORT", "3000")
 	e.Logger.Infof("starting isuports server on : %s ...", port)
@@ -677,7 +678,6 @@ func tenantsBillingHandler(c echo.Context) error {
 				Name:        t.Name,
 				DisplayName: t.DisplayName,
 			}
-			defer tenantDB.Close()
 			cs := []CompetitionRow{}
 			if err := tenantDB.SelectContext(
 				ctx,
