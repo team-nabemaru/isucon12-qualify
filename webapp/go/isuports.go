@@ -1051,13 +1051,29 @@ func competitionScoreHandler(c echo.Context) error {
 		return fmt.Errorf("error tenantDB.Beginx: %w", err)
 	}
 	defer tx.Rollback()
-	if _, err := tx.ExecContext(
+
+	deleted := false
+	if err := tx.GetContext(
 		ctx,
-		"DELETE FROM player_score WHERE tenant_id = ? AND competition_id = ?",
+		nil,
+		"SELECT count(1) FROM player_score WHERE tenant_id = ? AND competition_id = ? limit 1",
 		v.tenantID,
 		competitionID,
 	); err != nil {
-		return fmt.Errorf("error Delete player_score: tenantID=%d, competitionID=%s, %w", v.tenantID, competitionID, err)
+		if errors.Is(err, sql.ErrNoRows) {
+			deleted = true
+		}
+	}
+
+	if deleted == false {
+		if _, err := tx.ExecContext(
+			ctx,
+			"DELETE FROM player_score WHERE tenant_id = ? AND competition_id = ?",
+			v.tenantID,
+			competitionID,
+		); err != nil {
+			return fmt.Errorf("error Delete player_score: tenantID=%d, competitionID=%s, %w", v.tenantID, competitionID, err)
+		}
 	}
 	sql := "INSERT INTO player_score (id, tenant_id, player_id, competition_id, score, row_num, created_at, updated_at) VALUES "
 	for _, ps := range playerScoreRows {
