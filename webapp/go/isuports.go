@@ -999,7 +999,6 @@ func competitionScoreHandler(c echo.Context) error {
 
 	var rowNum int64
 	playerScoreRows := []PlayerScoreRow{}
-	now := time.Now().Unix()
 	for {
 		rowNum++
 		row, err := r.Read()
@@ -1034,6 +1033,7 @@ func competitionScoreHandler(c echo.Context) error {
 		if err != nil {
 			return fmt.Errorf("error dispenseID: %w", err)
 		}
+		now := time.Now().Unix()
 		playerScoreRows = append(playerScoreRows, PlayerScoreRow{
 			ID:            id,
 			TenantID:      v.tenantID,
@@ -1051,29 +1051,39 @@ func competitionScoreHandler(c echo.Context) error {
 		return fmt.Errorf("error tenantDB.Beginx: %w", err)
 	}
 	defer tx.Rollback()
+	if _, err := tx.ExecContext(
+		ctx,
+		"DELETE FROM player_score WHERE tenant_id = ? AND competition_id = ?",
+		v.tenantID,
+		competitionID,
+	); err != nil {
+		return fmt.Errorf("error Delete player_score: tenantID=%d, competitionID=%s, %w", v.tenantID, competitionID, err)
+	}
 	sql := "INSERT INTO player_score (id, tenant_id, player_id, competition_id, score, row_num, created_at, updated_at) VALUES "
 	for _, ps := range playerScoreRows {
 		sql += fmt.Sprintf(
 			"('%s', %d, '%s', '%s', %d, %d, %d, %d),",
 			ps.ID, ps.TenantID, ps.PlayerID, ps.CompetitionID, ps.Score, ps.RowNum, ps.CreatedAt, ps.UpdatedAt,
 		)
+
+		// if _, err := tx.NamedExecContext(
+		// 	ctx,
+		// 	"INSERT INTO player_score (id, tenant_id, player_id, competition_id, score, row_num, created_at, updated_at) VALUES (:id, :tenant_id, :player_id, :competition_id, :score, :row_num, :created_at, :updated_at)",
+		// 	ps,
+		// ); err != nil {
+		// 	return fmt.Errorf(
+		// 		"error Insert player_score: id=%s, tenant_id=%d, playerID=%s, competitionID=%s, score=%d, rowNum=%d, createdAt=%d, updatedAt=%d, %w",
+		// 		ps.ID, ps.TenantID, ps.PlayerID, ps.CompetitionID, ps.Score, ps.RowNum, ps.CreatedAt, ps.UpdatedAt, err,
+		// 	)
+		// }
 	}
 	sql = sql[:len(sql)-1]
+
 	_, err = tx.Exec(sql)
 	if err != nil {
 		// c.Logger().Errorf("db error: %v", err)
 		// return c.NoContent(http.StatusInternalServerError)
 		return fmt.Errorf("error Insert player_score: %w", err)
-	}
-
-	if _, err := tx.ExecContext(
-		ctx,
-		"DELETE FROM player_score WHERE tenant_id = ? AND competition_id = ? AND updated_at < ?",
-		v.tenantID,
-		competitionID,
-		now,
-	); err != nil {
-		return fmt.Errorf("error Delete player_score: tenantID=%d, competitionID=%s, %w", v.tenantID, competitionID, err)
 	}
 
 	tx.Commit()
