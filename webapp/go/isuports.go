@@ -1079,6 +1079,7 @@ func competitionScoreHandler(c echo.Context) error {
 	}
 	sql = sql[:len(sql)-1]
 
+	_, err = tx.Exec(sql)
 	if err != nil {
 		// c.Logger().Errorf("db error: %v", err)
 		// return c.NoContent(http.StatusInternalServerError)
