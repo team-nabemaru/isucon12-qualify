@@ -1451,7 +1451,7 @@ func competitionRankingHandler(c echo.Context) error {
 	if err := tenantDB.SelectContext(
 		ctx,
 		&pss,
-		"SELECT score, player_id, MAX(row_num) AS row_num FROM latest_player_score WHERE competition_id = ?",
+		"SELECT score, player_id, row_num AS row_num FROM latest_player_score WHERE competition_id = ?",
 		competitionID,
 	); err != nil {
 		return fmt.Errorf("error Select player_score: tenantID=%d, competitionID=%s, %w", tenant.ID, competitionID, err)
