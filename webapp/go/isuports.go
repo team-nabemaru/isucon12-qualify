@@ -155,8 +155,8 @@ func Run() {
 	// defer sqlLogger.Close()
 
 	redisClient = NewRedisClient(context.TODO())
-	playerCache = NewCache[PlayerRow](*redisClient, 5*time.Second)
-	competitionCache = NewCache[CompetitionRow](*redisClient, 5*time.Second)
+	playerCache = NewCache[PlayerRow](*redisClient, 60*time.Second)
+	competitionCache = NewCache[CompetitionRow](*redisClient, 60*time.Second)
 
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
