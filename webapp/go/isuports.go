@@ -834,9 +834,9 @@ func tenantsBillingHandler(c echo.Context) error {
 }
 
 type PlayerDetail struct {
-	ID             string `json:"id"`
-	DisplayName    string `json:"display_name"`
-	IsDisqualified bool   `json:"is_disqualified"`
+	ID             string `json:"id" db:"id"`
+	DisplayName    string `json:"display_name" db:"display_name"`
+	IsDisqualified bool   `json:"is_disqualified" db:"is_disqualified"`
 }
 
 type PlayersListHandlerResult struct {
