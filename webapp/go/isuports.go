@@ -63,9 +63,9 @@ func competitionCacheKey(competitonId string) string {
 	return fmt.Sprintf("competition:%s", competitonId)
 }
 
-// func playerScoreCacheKey(competitonId string) string {
-// return fmt.Sprintf("player_score:%s", competitonId)
-// }
+func latestplayerScoreCacheKey(competitonId string, playerId string) string {
+	return fmt.Sprintf("player_score:%s-%s", competitonId, playerId)
+}
 
 func visitHistorySummaryCacheKey(competitonId string) string {
 	return fmt.Sprintf("visit_history:%s", competitonId)
@@ -1365,23 +1365,24 @@ func playerHandler(c echo.Context) error {
 	// }
 	// defer fl.Close()
 	pss := make([]PlayerScoreRow, 0, len(cs))
+
+	cs_id_array := make([]string, 0, len(cs))
 	for _, c := range cs {
-		ps := PlayerScoreRow{}
-		if err := tenantDB.GetContext(
-			ctx,
-			&ps,
-			// 最後にCSVに登場したスコアを採用する = row_numが一番大きいもの
-			"SELECT `competition_id`, `score` FROM latest_player_score WHERE competition_id = ? AND player_id = ?",
-			c.ID,
-			p.ID,
-		); err != nil {
-			// 行がない = スコアが記録されてない
-			if errors.Is(err, sql.ErrNoRows) {
-				continue
-			}
-			return fmt.Errorf("error Select player_score: tenantID=%d, competitionID=%s, playerID=%s, %w", v.tenantID, c.ID, p.ID, err)
-		}
-		pss = append(pss, ps)
+		cs_id_array = append(cs_id_array, fmt.Sprintf("'%s'", c.ID))
+	}
+	stmt := "SELECT `competition_id`, `player_id`, `score`" + `
+					 FROM latest_player_score
+					 WHERE player_id = ?
+					 AND competition_id IN (` + strings.Join(cs_id_array, ",") + `)
+	`
+
+	if err := tenantDB.SelectContext(
+		ctx,
+		&pss,
+		stmt,
+		p.ID,
+	); err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return fmt.Errorf("error Select latest_player_score: %w", err)
 	}
 
 	psds := make([]PlayerScoreDetail, 0, len(pss))
@@ -1492,6 +1493,7 @@ func competitionRankingHandler(c echo.Context) error {
 	// defer fl.Close()
 
 	pss := []PlayerScoreRow{}
+
 	if err := tenantDB.SelectContext(
 		ctx,
 		&pss,
