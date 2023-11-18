@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"encoding/csv"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -196,48 +195,48 @@ func Run() {
 
 	tenantDB = adminDB
 
-	hostname, _ := os.Hostname()
-	if hostname == "ip-192-168-0-12" {
-		go func() {
-			for {
-				ctx := context.TODO()
-				ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	// hostname, _ := os.Hostname()
+	// if hostname == "ip-192-168-0-12" {
+	// 	go func() {
+	// 		for {
+	// 			ctx := context.TODO()
+	// 			ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 
-				playerScores := []PlayerScoreRow{}
-				if err := tenantDB.SelectContext(ctx, &playerScores,
-					"SELECT `player_id`, `competition_id`, `score`, MAX(row_num) AS row_num FROM player_score GROUP BY tenant_id, competition_id, player_id, score"); err != nil {
-					fmt.Println("error Select player_score: ", err)
-				}
+	// 			playerScores := []PlayerScoreRow{}
+	// 			if err := tenantDB.SelectContext(ctx, &playerScores,
+	// 				"SELECT `player_id`, `competition_id`, `score`, MAX(row_num) AS row_num FROM player_score GROUP BY tenant_id, competition_id, player_id, score"); err != nil {
+	// 				fmt.Println("error Select player_score: ", err)
+	// 			}
 
-				playerScoresMap := map[string][]PlayerScoreRow{}
-				for _, playerScore := range playerScores {
-					key := playerScoreCacheKey(playerScore.CompetitionID)
+	// 			playerScoresMap := map[string][]PlayerScoreRow{}
+	// 			for _, playerScore := range playerScores {
+	// 				key := playerScoreCacheKey(playerScore.CompetitionID)
 
-					if _, ok := playerScoresMap[key]; !ok {
-						playerScoresMap[key] = []PlayerScoreRow{}
-					}
+	// 				if _, ok := playerScoresMap[key]; !ok {
+	// 					playerScoresMap[key] = []PlayerScoreRow{}
+	// 				}
 
-					playerScoresMap[key] = append(playerScoresMap[key], playerScore)
-				}
+	// 				playerScoresMap[key] = append(playerScoresMap[key], playerScore)
+	// 			}
 
-				for key, playerScores := range playerScoresMap {
-					bytes, err := json.Marshal(playerScores)
-					if err != nil {
-						fmt.Println("error Marshal player_score: ", err)
-						continue
-					}
+	// 			for key, playerScores := range playerScoresMap {
+	// 				bytes, err := json.Marshal(playerScores)
+	// 				if err != nil {
+	// 					fmt.Println("error Marshal player_score: ", err)
+	// 					continue
+	// 				}
 
-					if err := redisClient.client.Set(ctx, key, bytes, 10*time.Second).Err(); err != nil {
-						fmt.Println("error Set player_score: ", err)
-						continue
-					}
-				}
+	// 				if err := redisClient.client.Set(ctx, key, bytes, 10*time.Second).Err(); err != nil {
+	// 					fmt.Println("error Set player_score: ", err)
+	// 					continue
+	// 				}
+	// 			}
 
-				cancel()
-				// time.Sleep(3 * time.Second)
-			}
-		}()
-	}
+	// 			cancel()
+	// 			// time.Sleep(3 * time.Second)
+	// 		}
+	// 	}()
+	// }
 
 	defer adminDB.Close()
 
@@ -429,37 +428,37 @@ func retrievePlayer(ctx context.Context, tenantDB dbOrTx, id string) (*PlayerRow
 	return &p, err
 }
 
-func retrievePlayerScores(ctx context.Context, tenantDB dbOrTx, competitonID string) ([]PlayerScoreRow, error) {
-	key := playerScoreCacheKey(competitonID)
-	bytes, result, _ := redisClient.Get(ctx, key)
-	if !result {
-		fmt.Println("Miss cache", competitonID)
-		var playerScores []PlayerScoreRow
-		if err := tenantDB.SelectContext(
-			ctx,
-			&playerScores,
-			"SELECT `player_id`, `competition_id`, `score`, MAX(row_num) AS row_num FROM player_score WHERE competition_id = ? GROUP BY tenant_id, competition_id, player_id, score",
-			competitonID,
-		); err != nil {
-			return nil, fmt.Errorf("error Select player_score: %w", err)
-		}
+// func retrievePlayerScores(ctx context.Context, tenantDB dbOrTx, competitonID string) ([]PlayerScoreRow, error) {
+// 	key := playerScoreCacheKey(competitonID)
+// 	bytes, result, _ := redisClient.Get(ctx, key)
+// 	if !result {
+// 		fmt.Println("Miss cache", competitonID)
+// 		var playerScores []PlayerScoreRow
+// 		if err := tenantDB.SelectContext(
+// 			ctx,
+// 			&playerScores,
+// 			"SELECT `player_id`, `competition_id`, `score`, MAX(row_num) AS row_num FROM player_score WHERE competition_id = ? GROUP BY tenant_id, competition_id, player_id, score",
+// 			competitonID,
+// 		); err != nil {
+// 			return nil, fmt.Errorf("error Select player_score: %w", err)
+// 		}
 
-		bytes, err := json.Marshal(playerScores)
-		if err == nil {
-			redisClient.client.Set(ctx, key, bytes, 10*time.Second)
-		}
+// 		bytes, err := json.Marshal(playerScores)
+// 		if err == nil {
+// 			redisClient.client.Set(ctx, key, bytes, 10*time.Second)
+// 		}
 
-		return playerScores, nil
-	}
-	fmt.Println("Hit cache", competitonID)
+// 		return playerScores, nil
+// 	}
+// 	fmt.Println("Hit cache", competitonID)
 
-	var playerScores []PlayerScoreRow
-	if err := json.Unmarshal(bytes, &playerScores); err != nil {
-		return nil, err
-	}
+// 	var playerScores []PlayerScoreRow
+// 	if err := json.Unmarshal(bytes, &playerScores); err != nil {
+// 		return nil, err
+// 	}
 
-	return playerScores, nil
-}
+// 	return playerScores, nil
+// }
 
 // 参加者を認可する
 // 参加者向けAPIで呼ばれる
@@ -1447,20 +1446,21 @@ func competitionRankingHandler(c echo.Context) error {
 	// 	return fmt.Errorf("error flockByTenantID: %w", err)
 	// }
 	// defer fl.Close()
-	// pss := []PlayerScoreRow{}
-	// if err := tenantDB.SelectContext(
-	// 	ctx,
-	// 	&pss,
-	// 	"SELECT score, player_id, MAX(row_num) AS row_num FROM player_score WHERE tenant_id = ? AND competition_id = ? GROUP BY player_id, score",
-	// 	tenant.ID,
-	// 	competitionID,
-	// ); err != nil {
-	// 	return fmt.Errorf("error Select player_score: tenantID=%d, competitionID=%s, %w", tenant.ID, competitionID, err)
-	// }
-	pss, err := retrievePlayerScores(ctx, tenantDB, competitionID)
-	if err != nil {
-		return fmt.Errorf("error retrievePlayerScores: %w", err)
+
+	pss := []PlayerScoreRow{}
+	if err := tenantDB.SelectContext(
+		ctx,
+		&pss,
+		"SELECT score, player_id, MAX(row_num) AS row_num FROM latest_player_score WHERE competition_id = ?",
+		competitionID,
+	); err != nil {
+		return fmt.Errorf("error Select player_score: tenantID=%d, competitionID=%s, %w", tenant.ID, competitionID, err)
 	}
+
+	// pss, err := retrievePlayerScores(ctx, tenantDB, competitionID)
+	// if err != nil {
+	// 	return fmt.Errorf("error retrievePlayerScores: %w", err)
+	// }
 
 	ranks := make([]CompetitionRank, 0, len(pss))
 	scoredPlayerSet := make(map[string]struct{}, len(pss))
