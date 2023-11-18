@@ -923,8 +923,10 @@ func playersAddHandler(c echo.Context) error {
 
 	pds := make([]PlayerDetail, 0, len(displayNames))
 	stmt2 := "SELECT `id`, `display_name`, `is_disqualified` FROM player" + `
-					 WHERE id IN (` + strings.Join(id_array, ",") + `)
+					  WHERE id IN (` + strings.Join(id_array, ",") + `)
 	`
+
+	fmt.Println(stmt2)
 
 	if err := tenantDB.SelectContext(
 		ctx,
