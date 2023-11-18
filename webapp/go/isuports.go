@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/csv"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -65,6 +66,10 @@ func competitionCacheKey(competitonId string) string {
 // func playerScoreCacheKey(competitonId string) string {
 // return fmt.Sprintf("player_score:%s", competitonId)
 // }
+
+func visitHistorySummaryCacheKey(competitonId string) string {
+	return fmt.Sprintf("visit_history:%s", competitonId)
+}
 
 // 環境変数を取得する、なければデフォルト値を返す
 func getEnv(key string, defaultValue string) string {
@@ -460,6 +465,36 @@ func retrievePlayer(ctx context.Context, tenantDB dbOrTx, id string) (*PlayerRow
 // 	return playerScores, nil
 // }
 
+func retrieveVisitHistorySummaryRow(ctx context.Context, tenantDB dbOrTx, competitonID string) ([]VisitHistorySummaryRow, error) {
+	key := visitHistorySummaryCacheKey(competitonID)
+	bytes, result, _ := redisClient.Get(ctx, key)
+	if !result {
+		var vhs []VisitHistorySummaryRow
+		if err := tenantDB.SelectContext(
+			ctx,
+			&vhs,
+			"SELECT player_id, MIN(created_at) AS min_created_at FROM visit_history WHERE competition_id = ?",
+			competitonID,
+		); err != nil {
+			return nil, fmt.Errorf("error Select visit_history: %w", err)
+		}
+
+		bytes, err := json.Marshal(vhs)
+		if err == nil {
+			redisClient.client.Set(ctx, key, bytes, 10*time.Second)
+		}
+
+		return vhs, nil
+	}
+
+	var vhs []VisitHistorySummaryRow
+	if err := json.Unmarshal(bytes, &vhs); err != nil {
+		return nil, err
+	}
+
+	return vhs, nil
+}
+
 // 参加者を認可する
 // 参加者向けAPIで呼ばれる
 func authorizePlayer(ctx context.Context, tenantDB dbOrTx, id string) error {
@@ -632,15 +667,20 @@ func billingReportByCompetition(ctx context.Context, tenantDB dbOrTx, tenantID i
 	}
 
 	// ランキングにアクセスした参加者のIDを取得する
-	vhs := []VisitHistorySummaryRow{}
-	if err := adminDB.SelectContext(
-		ctx,
-		&vhs,
-		"SELECT player_id, created_at AS min_created_at FROM visit_history WHERE competition_id = ?",
-		comp.ID,
-	); err != nil && err != sql.ErrNoRows {
-		return nil, fmt.Errorf("error Select visit_history: tenantID=%d, competitionID=%s, %w", tenantID, comp.ID, err)
+	// vhs := []VisitHistorySummaryRow{}
+	// if err := adminDB.SelectContext(
+	// 	ctx,
+	// 	&vhs,
+	// 	"SELECT player_id, created_at AS min_created_at FROM visit_history WHERE competition_id = ?",
+	// 	comp.ID,
+	// ); err != nil && err != sql.ErrNoRows {
+	// 	return nil, fmt.Errorf("error Select visit_history: tenantID=%d, competitionID=%s, %w", tenantID, comp.ID, err)
+	// }
+	vhs, err := retrieveVisitHistorySummaryRow(ctx, tenantDB, competitonID)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieveVisitHistorySummaryRow: %w", err)
 	}
+
 	billingMap := map[string]string{}
 	for _, vh := range vhs {
 		// competition.finished_atよりもあとの場合は、終了後に訪問したとみなして大会開催内アクセス済みとみなさない
@@ -1431,6 +1471,8 @@ func competitionRankingHandler(c echo.Context) error {
 				v.playerID, tenant.ID, competitionID, now, now, err,
 			)
 		}
+	} else {
+		redisClient.client.Del(ctx, visitHistorySummaryCacheKey(competitionID))
 	}
 
 	var rankAfter int64
