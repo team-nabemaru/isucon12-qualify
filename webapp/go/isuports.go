@@ -62,9 +62,9 @@ func competitionCacheKey(competitonId string) string {
 	return fmt.Sprintf("competition:%s", competitonId)
 }
 
-func playerScoreCacheKey(competitonId string) string {
-	return fmt.Sprintf("player_score:%s", competitonId)
-}
+// func playerScoreCacheKey(competitonId string) string {
+// return fmt.Sprintf("player_score:%s", competitonId)
+// }
 
 // 環境変数を取得する、なければデフォルト値を返す
 func getEnv(key string, defaultValue string) string {
@@ -1213,10 +1213,10 @@ func competitionScoreHandler(c echo.Context) error {
 
 	tx.Commit()
 
-	go func() {
-		key := playerScoreCacheKey(competitionID)
-		redisClient.client.Del(ctx, key)
-	}()
+	// go func() {
+	// 	key := playerScoreCacheKey(competitionID)
+	// 	redisClient.client.Del(ctx, key)
+	// }()
 
 	return c.JSON(http.StatusOK, SuccessResult{
 		Status: true,
