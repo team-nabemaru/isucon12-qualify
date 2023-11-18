@@ -913,7 +913,7 @@ func playersAddHandler(c echo.Context) error {
 			"('%s', %d, '%s', %t, %d, %d),",
 			id, v.tenantID, displayName, false, now, now,
 		)
-		id_array = append(id_array, id)
+		id_array = append(id_array, fmt.Sprintf("'%s'", id))
 	}
 	stmt = stmt[:len(stmt)-1]
 	_, err = tenantDB.Exec(stmt)
@@ -922,11 +922,10 @@ func playersAddHandler(c echo.Context) error {
 	}
 
 	pds := make([]PlayerDetail, 0, len(displayNames))
+
 	stmt2 := "SELECT `id`, `display_name`, `is_disqualified` FROM player" + `
 					  WHERE id IN (` + strings.Join(id_array, ",") + `)
 	`
-
-	fmt.Println(stmt2)
 
 	if err := tenantDB.SelectContext(
 		ctx,
