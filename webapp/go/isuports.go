@@ -473,7 +473,7 @@ func retrieveVisitHistorySummaryRow(ctx context.Context, tenantDB dbOrTx, compet
 		if err := tenantDB.SelectContext(
 			ctx,
 			&vhs,
-			"SELECT player_id, MIN(created_at) AS min_created_at FROM visit_history WHERE competition_id = ?",
+			"SELECT player_id, created_at AS min_created_at FROM visit_history WHERE competition_id = ?",
 			competitonID,
 		); err != nil {
 			return nil, fmt.Errorf("error Select visit_history: %w", err)
