@@ -11,12 +11,16 @@ require (
 	github.com/labstack/gommon v0.4.0
 	github.com/lestrrat-go/jwx/v2 v2.0.2
 	github.com/mattn/go-sqlite3 v1.14.13
+	github.com/redis/go-redis/v9 v9.3.0
 	github.com/rs/xid v1.5.0
 	github.com/shogo82148/go-sql-proxy v0.6.1
+	golang.org/x/sync v0.5.0
 )
 
 require (
+	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.0.1 // indirect
+	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/goccy/go-json v0.9.7 // indirect
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/kr/text v0.2.0 // indirect
