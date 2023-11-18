@@ -196,7 +196,7 @@ func Run() {
 		e.Logger.Fatalf("failed to connect db: %v", err)
 		return
 	}
-	adminDB.SetMaxOpenConns(10)
+	adminDB.SetMaxOpenConns(30)
 
 	tenantDB = adminDB
 
