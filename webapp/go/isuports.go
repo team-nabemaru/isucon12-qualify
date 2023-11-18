@@ -200,8 +200,11 @@ func Run() {
 	if hostname == "ip-192-168-0-12" {
 		go func() {
 			for {
+				ctx := context.TODO()
+				ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+
 				playerScores := []PlayerScoreRow{}
-				if err := tenantDB.SelectContext(context.TODO(), &playerScores,
+				if err := tenantDB.SelectContext(ctx, &playerScores,
 					"SELECT `player_id`, `competition_id`, `score`, MAX(row_num) AS row_num FROM player_score GROUP BY tenant_id, competition_id, player_id, score"); err != nil {
 					fmt.Println("error Select player_score: ", err)
 				}
@@ -224,11 +227,13 @@ func Run() {
 						continue
 					}
 
-					if err := redisClient.client.Set(context.TODO(), key, bytes, 10*time.Second).Err(); err != nil {
+					if err := redisClient.client.Set(ctx, key, bytes, 10*time.Second).Err(); err != nil {
 						fmt.Println("error Set player_score: ", err)
 						continue
 					}
 				}
+
+				cancel()
 				// time.Sleep(3 * time.Second)
 			}
 		}()
